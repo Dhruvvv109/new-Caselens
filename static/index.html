@@ -1,0 +1,538 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CaseLens — Judicial Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,500;0,8..60,600;1,8..60,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <!-- Top Bar -->
+  <header class="top-bar">
+    <div class="top-left">
+      <div class="logo-mark">CL</div>
+      <div class="logo-text-group">
+        <span class="logo-title">CaseLens</span>
+        <span class="logo-tagline">Judicial Intelligence</span>
+      </div>
+    </div>
+    <div class="top-right">
+      <div class="system-status">
+        <span class="status-dot"></span>
+        <span class="status-label">Online</span>
+      </div>
+      <div class="user-chip">Bench Clerk</div>
+    </div>
+  </header>
+
+  <!-- App Layout -->
+  <div class="app-layout">
+    <!-- Sidebar Navigation -->
+    <aside class="sidebar">
+      <nav class="side-nav">
+        <a href="#/" class="nav-item active" data-route="overview">
+          <span class="nav-icon">&sect;</span>
+          <span class="nav-label">Overview</span>
+        </a>
+        <a href="#/search" class="nav-item" data-route="search">
+          <span class="nav-icon">&#x260C;</span>
+          <span class="nav-label">Precedent Search</span>
+        </a>
+        <a href="#/docket" class="nav-item" data-route="docket">
+          <span class="nav-icon">&#x2637;</span>
+          <span class="nav-label">Docket &amp; Queue</span>
+        </a>
+        <a href="#/add" class="nav-item" data-route="add">
+          <span class="nav-icon">+</span>
+          <span class="nav-label">Add Case</span>
+        </a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="corpus-badge" id="corpus-info">Corpus: 400 cases</div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="content-area" id="main-content">
+
+      <!-- View: Overview (#/) -->
+      <section id="view-overview" class="route-view">
+        <div class="page-header">
+          <h1 class="page-title">Court Overview &amp; Priority Queue</h1>
+          <p class="page-subtitle">Real-time docket triage, statutory precedent matching, and judicial time-horizon predictions.</p>
+        </div>
+
+        <!-- 4 KPI Cards -->
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <span class="kpi-label">Total Active Cases</span>
+            <span class="kpi-value" id="kpi-total-active">&mdash;</span>
+            <span class="kpi-meta" id="kpi-total-meta">In court registry</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Under Hearing</span>
+            <span class="kpi-value" id="kpi-under-hearing">&mdash;</span>
+            <span class="kpi-meta" id="kpi-hearing-meta">Active proceedings</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Judgment Reserved</span>
+            <span class="kpi-value" id="kpi-reserved">&mdash;</span>
+            <span class="kpi-meta">Awaiting final order</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Fast-track Eligible</span>
+            <span class="kpi-value" id="kpi-fast-track">&mdash;</span>
+            <span class="kpi-meta">High precedent certainty</span>
+          </div>
+        </div>
+
+        <!-- Quick Jump to Search -->
+        <div class="overview-search-panel panel">
+          <form id="overview-search-form" class="quick-search-form">
+            <label for="overview-search-input" class="panel-section-title">Quick Precedent Query</label>
+            <div class="search-input-group">
+              <input
+                type="text"
+                id="overview-search-input"
+                placeholder="Search across 400 Indian judgments (e.g., Section 138 NI Act, Rent Control Act eviction, writ mandamus)..."
+              />
+              <button type="submit" class="btn btn-primary">Find Precedents</button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Top Priority Queue -->
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <h2 class="panel-title">Priority Triage Queue (Top 10)</h2>
+              <p class="panel-desc">Algorithmic ordering based on pendency delay, precedent uncertainty, and hearing overhead.</p>
+            </div>
+            <a href="#/docket" class="link-small">View Full Docket &rarr;</a>
+          </div>
+
+          <div class="table-wrap">
+            <table class="data-table" id="table-overview-queue">
+              <thead>
+                <tr>
+                  <th style="width: 50px;">Rank</th>
+                  <th style="width: 140px;">Case No.</th>
+                  <th>Title</th>
+                  <th style="width: 120px;">Bucket</th>
+                  <th style="width: 90px;">Est. Days</th>
+                  <th style="width: 110px;">Precedent</th>
+                  <th style="width: 70px;">Score</th>
+                </tr>
+              </thead>
+              <tbody id="queue-tbody">
+                <tr><td colspan="7" class="td-status">Loading priority queue&hellip;</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- How prediction works collapsible -->
+        <details class="explain-details panel">
+          <summary class="explain-summary">How prediction and priority scoring work</summary>
+          <div class="explain-content">
+            <p><strong>Timeline Horizon:</strong> Estimated resolution duration is calculated using a Gradient Boosting Regressor trained on Indian jurisdictional timelines. Features include statutory case type, days elapsed since filing date, number of active parties, appeal flag, and semantic precedent similarity statistics.</p>
+            <p><strong>Precedent Features:</strong> Query embeddings are evaluated against the corpus index to derive top-1 cosine similarity, mean of top-5 matches, matches surpassing threshold, and similarity spread.</p>
+            <p><strong>Priority Score:</strong> Weighted combination of time pending, hearing count overhead, and precedent ambiguity. Higher score indicates matters needing expedited judicial intervention.</p>
+          </div>
+        </details>
+      </section>
+
+      <!-- View: Precedent Search (#/search) -->
+      <section id="view-search" class="route-view" hidden>
+        <div class="page-header">
+          <h1 class="page-title">Precedent Search</h1>
+          <p class="page-subtitle">Semantic matching with statutory keyword boosting across Indian High Court and Supreme Court judgments.</p>
+        </div>
+
+        <div class="panel search-card">
+          <form id="search-form">
+            <div class="search-main-field">
+              <label for="search-input" class="field-label">Search Query or Case Narrative</label>
+              <textarea
+                id="search-input"
+                rows="3"
+                placeholder="Describe the facts, provisions, or controversy (e.g. Dishonour of cheque issued for legally enforceable debt under Section 138 of Negotiable Instruments Act)..."
+              ></textarea>
+            </div>
+
+            <div class="examples-row">
+              <span class="examples-tag">Examples:</span>
+              <div class="examples-links" id="search-examples">
+                <a href="#" class="ex-link" data-query="Dishonour of cheque under Section 138 NI Act with statutory notice of demand">Cheque dishonour (S. 138 NI Act)</a>
+                <a href="#" class="ex-link" data-query="Tenant eviction bona fide personal necessity arrears of rent under Rent Control Act">Tenant eviction &amp; arrears</a>
+                <a href="#" class="ex-link" data-query="Workman illegal retrenchment without compensation under Industrial Disputes Act reinstatement with back wages">Workman retrenchment &amp; reinstatement</a>
+                <a href="#" class="ex-link" data-query="Irretrievable breakdown of marriage mental cruelty dissolution of marriage Section 13 Hindu Marriage Act">Cruelty &amp; divorce (S. 13 HMA)</a>
+                <a href="#" class="ex-link" data-query="Assessment order under Section 143(3) Income Tax Act disallowed deduction reassessment notice">Income Tax disallowance S. 143(3)</a>
+                <a href="#" class="ex-link" data-query="Writ petition under Article 226 mandamus quashing arbitrary tender rejection">Writ under Article 226 (Mandamus)</a>
+              </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="filters-row">
+              <div class="filter-col">
+                <label for="filter-case-type" class="filter-label">Case Type</label>
+                <select id="filter-case-type" class="filter-control">
+                  <option value="">All Types</option>
+                  <option value="Criminal">Criminal</option>
+                  <option value="Property/Civil">Property / Civil</option>
+                  <option value="Family">Family</option>
+                  <option value="Labour">Labour</option>
+                  <option value="Consumer">Consumer</option>
+                  <option value="Tax">Tax</option>
+                  <option value="Constitutional/Writ">Constitutional / Writ</option>
+                  <option value="Contract">Contract</option>
+                </select>
+              </div>
+
+              <div class="filter-col">
+                <label for="filter-court" class="filter-label">Court</label>
+                <input type="text" id="filter-court" class="filter-control" placeholder="e.g. Delhi High Court" />
+              </div>
+
+              <div class="filter-col filter-col--year">
+                <label for="filter-year-min" class="filter-label">Year From</label>
+                <input type="number" id="filter-year-min" class="filter-control" placeholder="2010" min="1950" max="2026" />
+              </div>
+
+              <div class="filter-col filter-col--year">
+                <label for="filter-year-max" class="filter-label">Year To</label>
+                <input type="number" id="filter-year-max" class="filter-control" placeholder="2026" min="1950" max="2026" />
+              </div>
+
+              <div class="filter-col filter-col--btn">
+                <button type="submit" id="btn-search-exec" class="btn btn-primary">Search Precedents</button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <!-- Search Status & Results Summary -->
+        <div class="results-header" id="search-results-header" hidden>
+          <span class="results-meta-text" id="search-meta-text">Showing 0 judgments</span>
+          <span class="backend-tag" id="search-backend-tag">backend: sentence-transformers</span>
+        </div>
+
+        <div id="search-state-area"></div>
+        <div class="results-list" id="search-results-list"></div>
+      </section>
+
+      <!-- View: Docket & Queue (#/docket) -->
+      <section id="view-docket" class="route-view" hidden>
+        <div class="page-header">
+          <h1 class="page-title">Docket &amp; Cause List</h1>
+          <p class="page-subtitle">Comprehensive registry of pending matters, hearing milestones, and estimated time-horizons.</p>
+        </div>
+
+        <div class="panel docket-controls-panel">
+          <!-- Bucket Tabs -->
+          <div class="bucket-tabs" id="docket-bucket-tabs">
+            <button class="bucket-tab active" data-bucket="">All</button>
+            <button class="bucket-tab" data-bucket="Fast-track">Fast-track</button>
+            <button class="bucket-tab" data-bucket="Standard">Standard</button>
+            <button class="bucket-tab" data-bucket="Needs attention">Needs Attention</button>
+          </div>
+
+          <!-- Controls row: Search, Case Type, Sort -->
+          <div class="docket-filter-bar">
+            <div class="docket-search-input">
+              <input type="text" id="docket-q-input" placeholder="Search title or facts in docket..." />
+            </div>
+            <div class="docket-select-group">
+              <select id="docket-type-filter" class="filter-control">
+                <option value="">All Case Types</option>
+                <option value="Criminal">Criminal</option>
+                <option value="Property/Civil">Property / Civil</option>
+                <option value="Family">Family</option>
+                <option value="Labour">Labour</option>
+                <option value="Consumer">Consumer</option>
+                <option value="Tax">Tax</option>
+                <option value="Constitutional/Writ">Constitutional / Writ</option>
+                <option value="Contract">Contract</option>
+              </select>
+              <select id="docket-sort-select" class="filter-control">
+                <option value="priority">Sort: Priority Score (High &rarr; Low)</option>
+                <option value="days">Sort: Est. Days (Short &rarr; Long)</option>
+                <option value="filing">Sort: Filing Date (Oldest First)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Table -->
+        <div class="panel">
+          <div class="table-wrap">
+            <table class="data-table" id="table-docket">
+              <thead>
+                <tr>
+                  <th style="width: 130px;">Case No.</th>
+                  <th>Title</th>
+                  <th style="width: 100px;">Type</th>
+                  <th style="width: 130px;">Court</th>
+                  <th style="width: 100px;">Status</th>
+                  <th style="width: 75px;">Hearings</th>
+                  <th style="width: 110px;">Est. Days (&plusmn;band)</th>
+                  <th style="width: 120px;">Bucket</th>
+                  <th style="width: 70px;">Score</th>
+                </tr>
+              </thead>
+              <tbody id="docket-tbody">
+                <tr><td colspan="9" class="td-status">Loading docket&hellip;</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination -->
+          <div class="pagination-bar" id="docket-pagination" hidden>
+            <span class="pagination-info" id="pagination-info">Page 1 of 1 (0 cases)</span>
+            <div class="pagination-controls">
+              <button class="btn btn-secondary" id="btn-page-prev" disabled>&larr; Previous</button>
+              <button class="btn btn-secondary" id="btn-page-next" disabled>Next &rarr;</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- View: Case Detail (#/case/:id) -->
+      <section id="view-case" class="route-view" hidden>
+        <div class="page-header">
+          <div class="breadcrumb">
+            <a href="#/docket">&larr; Back to Docket</a>
+          </div>
+          <h1 class="page-title" id="case-detail-title">Case Detail</h1>
+          <p class="page-subtitle" id="case-detail-sub">Loading record from judicial registry&hellip;</p>
+        </div>
+
+        <div id="case-detail-content">
+          <!-- Two-column grid -->
+          <div class="case-detail-grid">
+            <!-- Left: Case Info Card -->
+            <div class="panel case-info-card">
+              <h2 class="panel-title">Case Particulars</h2>
+              <dl class="meta-dl">
+                <dt>Case Number</dt>
+                <dd><span class="mono-badge" id="c-caseno">&mdash;</span></dd>
+
+                <dt>Case Title</dt>
+                <dd id="c-title">&mdash;</dd>
+
+                <dt>Case Type</dt>
+                <dd id="c-type">&mdash;</dd>
+
+                <dt>Court Jurisdiction</dt>
+                <dd id="c-court">&mdash;</dd>
+
+                <dt>Filing Date</dt>
+                <dd id="c-filing">&mdash;</dd>
+
+                <dt>Status</dt>
+                <dd id="c-status">&mdash;</dd>
+
+                <dt>Hearings Completed</dt>
+                <dd id="c-hearings">&mdash;</dd>
+
+                <dt>Number of Parties</dt>
+                <dd id="c-parties">&mdash;</dd>
+
+                <dt>Proceeding Nature</dt>
+                <dd id="c-appeal">&mdash;</dd>
+              </dl>
+
+              <div class="case-desc-block">
+                <h3 class="field-label">Subject Matter &amp; Pleadings</h3>
+                <p id="c-desc" class="desc-text">&mdash;</p>
+              </div>
+            </div>
+
+            <!-- Right: Prediction & Priority Card -->
+            <div class="panel case-pred-card">
+              <h2 class="panel-title">Judicial Prediction Analysis</h2>
+
+              <div class="pred-highlight-box">
+                <div class="pred-days-group">
+                  <span class="pred-days-number" id="c-pred-days">&mdash;</span>
+                  <span class="pred-days-unit">Estimated Days to Resolution</span>
+                  <span class="pred-band-text" id="c-pred-band">Band: &mdash;</span>
+                </div>
+                <div class="pred-badge-group">
+                  <span id="c-bucket-badge" class="badge badge--standard">Standard</span>
+                </div>
+              </div>
+
+              <!-- Priority Score Bar / Gauge -->
+              <div class="gauge-section">
+                <div class="gauge-header">
+                  <span class="gauge-label">Priority Triage Index</span>
+                  <span class="gauge-score" id="c-priority-score">&mdash;</span>
+                </div>
+                <div class="gauge-track">
+                  <div class="gauge-fill" id="c-priority-fill" style="width: 0%;"></div>
+                </div>
+              </div>
+
+              <!-- Plain-English Why -->
+              <div class="why-panel">
+                <h3 class="why-title">Why this prediction?</h3>
+                <p class="why-body" id="c-why-text">&mdash;</p>
+              </div>
+
+              <!-- 4 Precedent Features -->
+              <div class="prec-features-box">
+                <h3 class="sub-label">Precedent Density Indicators</h3>
+                <div class="prec-stats-grid">
+                  <div class="stat-cell">
+                    <span class="stat-value" id="c-feat-top1">&mdash;</span>
+                    <span class="stat-label">Top-1 Similarity</span>
+                  </div>
+                  <div class="stat-cell">
+                    <span class="stat-value" id="c-feat-mean5">&mdash;</span>
+                    <span class="stat-label">Mean Top-5</span>
+                  </div>
+                  <div class="stat-cell">
+                    <span class="stat-value" id="c-feat-count">&mdash;</span>
+                    <span class="stat-label">Precedents &gt;0.5</span>
+                  </div>
+                  <div class="stat-cell">
+                    <span class="stat-value" id="c-feat-spread">&mdash;</span>
+                    <span class="stat-label">Similarity Spread</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Matching Precedents Section -->
+          <div class="panel precedents-section">
+            <div class="panel-header">
+              <div>
+                <h2 class="panel-title">Matching Precedents from Corpus</h2>
+                <p class="panel-desc">Top 5 judicial authorities most aligned with the pleadings and statutory context.</p>
+              </div>
+            </div>
+            <div class="results-list" id="case-precedents-list">
+              <div class="td-status">Loading matching precedents&hellip;</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- View: Add Case (#/add) -->
+      <section id="view-add" class="route-view" hidden>
+        <div class="page-header">
+          <h1 class="page-title">Enter New Matter in Docket</h1>
+          <p class="page-subtitle">Submit pleadings for automated semantic precedent analysis and timeline estimation.</p>
+        </div>
+
+        <div class="panel add-form-panel">
+          <form id="add-case-form" novalidate>
+            <div class="form-grid">
+              <div class="form-group form-group--full">
+                <label for="form-title" class="field-label required">Case Title</label>
+                <input
+                  type="text"
+                  id="form-title"
+                  name="title"
+                  required
+                  placeholder="e.g. Ramesh Chandra Sharma v. State of Rajasthan &amp; Ors."
+                />
+              </div>
+
+              <div class="form-group form-group--full">
+                <label for="form-desc" class="field-label required">Case Description &amp; Pleadings</label>
+                <textarea
+                  id="form-desc"
+                  name="description"
+                  rows="4"
+                  required
+                  placeholder="Summarize the core controversy, relevant statutory provisions, key dates, and relief sought..."
+                ></textarea>
+              </div>
+
+              <div class="form-group">
+                <label for="form-type" class="field-label required">Case Type</label>
+                <select id="form-type" name="case_type" required>
+                  <option value="">Select Category</option>
+                  <option value="Criminal">Criminal</option>
+                  <option value="Property/Civil">Property / Civil</option>
+                  <option value="Family">Family</option>
+                  <option value="Labour">Labour</option>
+                  <option value="Consumer">Consumer</option>
+                  <option value="Tax">Tax</option>
+                  <option value="Constitutional/Writ">Constitutional / Writ</option>
+                  <option value="Contract">Contract</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="form-court" class="field-label required">Court Jurisdiction</label>
+                <input
+                  type="text"
+                  id="form-court"
+                  name="court"
+                  required
+                  placeholder="e.g. High Court of Delhi"
+                  value="High Court of Delhi"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="form-filing" class="field-label required">Filing Date</label>
+                <input type="date" id="form-filing" name="filing_date" required />
+              </div>
+
+              <div class="form-group">
+                <label for="form-hearings" class="field-label required">Hearings So Far</label>
+                <input type="number" id="form-hearings" name="hearings_so_far" min="0" value="0" required />
+              </div>
+
+              <div class="form-group">
+                <label for="form-parties" class="field-label required">Number of Parties</label>
+                <input type="number" id="form-parties" name="num_parties" min="2" value="2" required />
+              </div>
+
+              <div class="form-group">
+                <label for="form-status" class="field-label required">Proceedings Status</label>
+                <select id="form-status" name="status" required>
+                  <option value="Pending">Pending</option>
+                  <option value="Under Hearing">Under Hearing</option>
+                  <option value="Judgment Reserved">Judgment Reserved</option>
+                </select>
+              </div>
+
+              <div class="form-group form-group--checkbox">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="form-appeal" name="is_appeal" />
+                  <span>Matter is an Appeal / Revision (First Appeal, LPA, or Criminal Appeal)</span>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-actions-bar">
+              <button type="submit" id="btn-submit-case" class="btn btn-primary">Score &amp; Register Case</button>
+              <a href="#/docket" class="btn btn-secondary">Cancel</a>
+              <span id="add-form-status" class="form-status-msg" aria-live="polite"></span>
+            </div>
+          </form>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <div class="footer-inner">
+      <span>&sect; Predictions are computed based on synthetic judicial models. Real court outcome datasets are required for enterprise production deployment.</span>
+    </div>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
